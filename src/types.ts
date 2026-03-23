@@ -7,10 +7,17 @@ export type Position = {
 
 export type Status = 'playing' | 'clear' | 'gameover';
 
+export type TurnPhase = 'awaitingInput' | 'reveal' | 'resolve' | 'finished';
+
 export type TurnResult = {
   playerDirection: Direction;
   enemyDirection: Direction;
   event: string;
+};
+
+export type PendingTurn = {
+  playerDirection: Direction;
+  enemyDirection: Direction;
 };
 
 export type GameState = {

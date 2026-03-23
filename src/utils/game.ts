@@ -1,4 +1,4 @@
-import type { Direction, GameState, Position } from '../types';
+import type { Direction, GameState, Position, TurnResult } from '../types';
 import { canReachAnyExit } from './pathfinding';
 
 export const BOARD_SIZE = 7;
@@ -80,4 +80,79 @@ export function getRandomDirection(): Direction {
 
 export function evaluateGameOver(player: Position, enemies: Position[]): boolean {
   return !canReachAnyExit(player, enemies, EXIT_POSITIONS, BOARD_SIZE);
+}
+
+export function resolveTurn(
+  currentState: GameState,
+  playerDirection: Direction,
+  enemyDirection: Direction,
+): GameState {
+  const currentPosition = currentState.player;
+  const nextPosition = getNextPosition(currentPosition, playerDirection);
+
+  if (isExit(nextPosition)) {
+    const turnResult: TurnResult = {
+      playerDirection,
+      enemyDirection,
+      event: '出口へ到達してクリア',
+    };
+
+    return {
+      ...currentState,
+      player: nextPosition,
+      status: 'clear',
+      message: '出口に到達しました。',
+      turnResult,
+    };
+  }
+
+  if (enemyDirection !== playerDirection) {
+    const nextStatus = evaluateGameOver(nextPosition, currentState.enemies)
+      ? 'gameover'
+      : 'playing';
+    const turnResult: TurnResult = {
+      playerDirection,
+      enemyDirection,
+      event: '移動成功',
+    };
+
+    return {
+      player: nextPosition,
+      enemies: currentState.enemies,
+      status: nextStatus,
+      message:
+        nextStatus === 'gameover'
+          ? 'どの出口にもたどり着けなくなりました。'
+          : '移動しました。',
+      turnResult,
+    };
+  }
+
+  const spawnPosition = nextPosition;
+  const canSpawn =
+    !isExit(spawnPosition) &&
+    !hasEnemy(spawnPosition, currentState.enemies) &&
+    !isSamePosition(spawnPosition, currentPosition);
+  const nextEnemies = canSpawn
+    ? [...currentState.enemies, spawnPosition]
+    : currentState.enemies;
+  const nextStatus = evaluateGameOver(currentPosition, nextEnemies) ? 'gameover' : 'playing';
+  const turnResult: TurnResult = {
+    playerDirection,
+    enemyDirection,
+    event: canSpawn ? '敵が出現' : '敵の出現は無効',
+  };
+
+  return {
+    player: currentPosition,
+    enemies: nextEnemies,
+    status: nextStatus,
+    message:
+      nextStatus === 'gameover'
+        ? '包囲され、どの出口にもたどり着けなくなりました。'
+        : canSpawn
+          ? '敵が出現しました。'
+          : '敵の出現は無効でした。',
+    turnResult,
+  };
 }
